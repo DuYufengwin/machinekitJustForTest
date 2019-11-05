@@ -3014,7 +3014,7 @@ static int emctask_startup()
 	return -1;
     }
     // now the interpreter
-
+	rcs_print("初始化规划器\n");
     if (0 != emcTaskPlanInit()) {
 	rcs_print_error("can't initialize interpreter\n");
 	return -1;
@@ -3250,6 +3250,7 @@ int main(int argc, char *argv[])
     // set print destination to stdout, for console apps
     set_rcs_print_destination(RCS_PRINT_TO_STDOUT);
     // process command line args
+	rcs_print("获取命令行参数\n");
     if (0 != emcGetArgs(argc, argv)) {
 	rcs_print_error("error in argument list\n");
 	exit(1);
@@ -3260,6 +3261,8 @@ int main(int argc, char *argv[])
 	exit(1);
     }
     // initialize globals
+	set_rcs_print_destination(RCS_PRINT_TO_STDOUT);
+	rcs_print("分配内存以及资源\n");
     emcInitGlobals();
 
     if (done) {
@@ -3267,6 +3270,7 @@ int main(int argc, char *argv[])
 	exit(1);
     }
     // get configuration information
+	rcs_print("载入ini文件\n");
     iniLoad(emc_inifile);
 
     if (done) {
@@ -3281,6 +3285,8 @@ int main(int argc, char *argv[])
     // get the Python plugin going
 
     // inistantiate task methods object, too
+	set_rcs_print_destination(RCS_PRINT_TO_STDOUT);
+	rcs_print("实例化emcmethods\n");
     emcTaskOnce(emc_inifile);
     if (task_methods == NULL) {
 	set_rcs_print_destination(RCS_PRINT_TO_STDOUT);	// restore diag
@@ -3290,9 +3296,13 @@ int main(int argc, char *argv[])
     }
 
     // this is the place to run any post-HAL-creation halcmd files
+	set_rcs_print_destination(RCS_PRINT_TO_STDOUT);
+	rcs_print("载入hal文件\n");
     emcRunHalFiles(emc_inifile);
 
     // initialize everything
+	set_rcs_print_destination(RCS_PRINT_TO_STDOUT);
+	rcs_print("分配资源 emctask_startup():\n");
     if (0 != emctask_startup()) {
 	emctask_shutdown();
 	exit(1);
@@ -3302,6 +3312,9 @@ int main(int argc, char *argv[])
     emcTaskSetMode(EMC_TASK_MODE_MANUAL);
 
     // cause the interpreter's starting offset to be reflected
+	set_rcs_print_destination(RCS_PRINT_TO_STDOUT);
+	rcs_print("emcTaskPlanInit(): 初始化plan\n");
+
     emcTaskPlanInit();
     // reflect the initial value of EMC_DEBUG in emcStatus->debug
     emcStatus->debug = emc_debug;
@@ -3319,33 +3332,41 @@ int main(int argc, char *argv[])
         newsig.sa_flags = 0;
         sigaction(SIGTERM, &newsig, NULL);
     }
-
+	
     startTime = etime();	// set start time before entering loop;
+	rcs_print("开始时间：%d\n",startTime);
     // it will be set at end of loop from now on
     minTime = DBL_MAX;		// set to value that can never be exceeded
     maxTime = 0.0;		// set to value that can never be underset
-
+	rcs_print("开始任务循环\n");
     while (!done) {
+		rcs_print("hal层check\n");
         check_ini_hal_items();
 	// read command
+		rcs_print("读取emcCommandbuffer内部命令\n");
 	if (0 != emcCommandBuffer->peek()) {
 	    // got a new command, so clear out errors
 	    taskPlanError = 0;
 	    taskExecuteError = 0;
 	}
 	// run control cycle
+	rcs_print("开始任务规划\n");
 	if (0 != emcTaskPlan()) {
 	    taskPlanError = 1;
 	}
+	rcs_print("开始任务执行\n");
 	if (0 != emcTaskExecute()) {
 	    taskExecuteError = 1;
 	}
 	// update subordinate status
-
+	rcs_print("IO状态更新\n");
 	emcIoUpdate(&emcStatus->io);
+	rcs_print("运动控制器状态更新\n");
 	emcMotionUpdate(&emcStatus->motion);
 	// synchronize subordinate states
+	rcs_print("急停判断\n");
 	if (emcStatus->io.aux.estop) {
+		rcs_print("急停：！\n");
 	    if (emcStatus->motion.traj.enabled) {
 		emcTrajDisable();
 		emcTaskAbort();
@@ -3356,15 +3377,19 @@ int main(int argc, char *argv[])
 		emcAbortCleanup(EMC_ABORT_AUX_ESTOP);
 		emcTaskPlanSynch();
 	    }
+
+		rcs_print("判断IO状态之冷却液\n");
 	    if (emcStatus->io.coolant.mist) {
 		emcCoolantMistOff();
 	    }
 	    if (emcStatus->io.coolant.flood) {
 		emcCoolantFloodOff();
 	    }
+		rcs_print("判断IO状态之润滑剂\n");
 	    if (emcStatus->io.lube.on) {
 		emcLubeOff();
 	    }
+		rcs_print("判断状态之主轴\n");
 	    if (emcStatus->motion.spindle.enabled) {
 		emcSpindleOff();
 	    }
@@ -3388,7 +3413,7 @@ int main(int argc, char *argv[])
 	    }
 
 	}
-
+	rcs_print("退出主循环\n");
 	// check for subordinate errors, and halt task if so
 	if (emcStatus->motion.status == RCS_ERROR ||
 	    ((emcStatus->io.status == RCS_ERROR) &&
@@ -3417,6 +3442,7 @@ int main(int argc, char *argv[])
 	    // }
 
         // abort everything
+		rcs_print("终止任务控制器，IO，主轴，mdi模式。\n");
         emcTaskAbort();
         emcIoAbort(EMC_ABORT_MOTION_OR_IO_RCS_ERROR);
         emcSpindleAbort();
@@ -3433,6 +3459,7 @@ int main(int argc, char *argv[])
 	    }
 
 	    // clear out the pending command
+		rcs_print("清空任务buffer\n");
 	    emcTaskCommand = 0;
 	    interp_list.clear();
 	    emcStatus->task.currentLine = 0;
@@ -3512,6 +3539,7 @@ int main(int argc, char *argv[])
     // end of while (! done)
 
     // clean up everything
+	rcs_print("清空一切资源\n");
     emctask_shutdown();
     /* debugging */
     if (emcTaskNoDelay) {
