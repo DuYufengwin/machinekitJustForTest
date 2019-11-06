@@ -261,6 +261,7 @@ This executes a previously parsed block.
 
 int Interp::_execute(const char *command)
 {
+  rcs_print("***************Excuting the command:_execute(const char *command)***************")
   int status;
   int n;
   int MDImode = 0;
@@ -1462,6 +1463,7 @@ zero, this parses the line into the _setup.block1.
 
 int Interp::_read(const char *command)  //!< may be NULL or a string to read
 {
+	rcs_print("***************starting read the NGC code!:_read(const char *command)*****************");
   static char name[] = "Interp::read";
   int read_status;
 
