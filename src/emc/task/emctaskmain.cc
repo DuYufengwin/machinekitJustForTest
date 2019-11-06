@@ -3014,7 +3014,7 @@ static int emctask_startup()
 	return -1;
     }
     // now the interpreter
-	rcs_print("初始化规划器\n");
+	rcs_print("***********initing the task planner init********\n");
     if (0 != emcTaskPlanInit()) {
 	rcs_print_error("can't initialize interpreter\n");
 	return -1;
@@ -3517,7 +3517,7 @@ int main(int argc, char *argv[])
 	// since emcStatus was passed to the WM init functions, it
 	// will be updated in the _update() functions above. There's
 	// no need to call the individual functions on all WM items.
-	rcs_print("**********Write the emcStatus :emcStatusBuffer->write(emcStatus);************")
+	rcs_print("**********Write the emcStatus :emcStatusBuffer->write(emcStatus);************");
 	emcStatusBuffer->write(emcStatus);
 
 	// wait on timer cycle, if specified, or calculate actual
@@ -3540,7 +3540,7 @@ int main(int argc, char *argv[])
 	    timer->wait();
 	}
     }
-	rcs_print("********end of while cycle*********")
+	rcs_print("********end of while cycle*********");
     // end of while (! done)
 
     // clean up everything
